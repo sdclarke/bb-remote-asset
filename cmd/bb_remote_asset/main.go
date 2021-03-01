@@ -69,10 +69,13 @@ func main() {
 		clock.SystemClock, "fetch",
 	)
 
-	pushServer := push.NewAssetPushServer(
-		assetStore,
-		allowUpdatesForInstances)
-	metricsPushServer := push.NewMetricsAssetPushServer(pushServer, clock.SystemClock, "push")
+	var metricsPushServer remoteasset.PushServer
+	if assetStore != nil {
+		pushServer := push.NewAssetPushServer(
+			assetStore,
+			allowUpdatesForInstances)
+		metricsPushServer = push.NewMetricsAssetPushServer(pushServer, clock.SystemClock, "push")
+	}
 
 	// Spawn gRPC servers for client and worker traffic.
 	go func() {
@@ -83,7 +86,9 @@ func main() {
 				func(s *grpc.Server) {
 					// Register services
 					remoteasset.RegisterFetchServer(s, fetchServer)
-					remoteasset.RegisterPushServer(s, metricsPushServer)
+					if metricsPushServer != nil {
+						remoteasset.RegisterPushServer(s, metricsPushServer)
+					}
 				}))
 	}()
 
